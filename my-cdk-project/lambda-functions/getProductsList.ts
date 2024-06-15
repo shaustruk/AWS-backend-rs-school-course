@@ -1,5 +1,5 @@
 import { APIGatewayProxyHandler } from 'aws-lambda';
-import { IProduct } from './productInterface';
+import { IProduct } from '../productInterface';
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   try {
@@ -11,13 +11,20 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     console.log('list');
     return {
       statusCode: 200,
-      body: JSON.stringify(products),
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(products),
     };
   } catch (error) {
-    console.error('Error fetching products:', error);
+    console.error('Error fetching products:', error, 'errrrrrrrrrr!!!!!1');
     return {
       statusCode: 500,
       body: JSON.stringify({ message: 'Internal server error' }),
+  
     };
   }
 };

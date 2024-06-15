@@ -8,42 +8,34 @@ export class ProductServiceStack extends cdk.Stack {
     super(scope, id, props);
 
     // Lambda function for getProductsList
-    const getProductsList = new lambda.Function(this, 'getProductsList', {
-      runtime: lambda.Runtime.NODEJS_16_X,
-      handler: 'getListProducts.handler',
-      code: lambda.Code.fromAsset('./lambda-functions/')
+    const getProductsListLambda = new lambda.Function(this, 'getProductsListHandler', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'getProductsList.handler',
+      code: lambda.Code.fromAsset('lambda-functions')
     });
 
     // Lambda function for getProductsById
-    const getProductsById = new lambda.Function(this, 'getProductsById', {
-      runtime: lambda.Runtime.NODEJS_16_X,
-      handler: 'getProductsById.handler',
-      code: lambda.Code.fromAsset('./lambda-functions/')
+    const getProductByIdLambda = new lambda.Function(this, 'getProductByIdHandler', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'getProductById.handler',
+      code: lambda.Code.fromAsset('lambda-functions')
     });
 
     // API Gateway
     const api = new apigateway.RestApi(this, 'productsApi', {
       restApiName: 'Products Service',
-      description: 'This service serves products.'
+      description: 'This service serves products.',
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: apigateway.Cors.ALL_METHODS,
+      },
     });
 
-    //!
-    // Define the /products resource with CORS configuration
-    const productsResource = api.root.addResource('products', {
-      defaultCorsPreflightOptions: {
-        allowOrigins: Cors.ALL_ORIGINS,
-        allowHeaders: Cors.DEFAULT_HEADERS,   
-      }
-    });
-    productsResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsList));
+    const productsResource = api.root.addResource('products');
+    productsResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsListLambda));
 
-    const productResource = productsResource.addResource('{productId}', {
-      defaultCorsPreflightOptions: {
-        allowOrigins: Cors.ALL_ORIGINS,
-        allowHeaders: Cors.DEFAULT_HEADERS,   
-      }
-  });
-  productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsById));
-
+    const productResource = productsResource.addResource('{productId}');
+    productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductByIdLambda));
+ 
   }
 }
