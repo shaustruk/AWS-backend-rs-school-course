@@ -1,30 +1,29 @@
-import { APIGatewayProxyHandler } from 'aws-lambda';
-import { IProduct } from '../productInterface';
+import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
+import { products } from './mockData';
 
-export const handler: APIGatewayProxyHandler = async (event) => {
-  try {
-    const products:IProduct[] = [
-      { id: '1', title: 'Product 1', price: 100, description: 'super', count: 5 },
-      { id: '2', title: 'Product 2', price: 150, description: 'bad', count: 4 },
-      { id: '3', title: 'Product 3', price: 200, description: 'norm', count: 5 }
-    ];
-    console.log('list');
-    return {
-      statusCode: 200,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(products),
-    };
-  } catch (error) {
-    console.error('Error fetching products:', error, 'errrrrrrrrrr!!!!!1');
+export const handler: APIGatewayProxyHandler = async (
+  event: APIGatewayProxyEvent,
+): Promise<APIGatewayProxyResult> => {  
+    if (products){
+      return {
+        statusCode: 200,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Content-Type": "application/json",
+      },
+      body: JSON.stringify(products),
+      };
+    }
+   
+else {
+    console.error('Error fetching products');
     return {
       statusCode: 500,
       body: JSON.stringify({ message: 'Internal server error' }),
   
     };
-  }
+ 
 };
+}

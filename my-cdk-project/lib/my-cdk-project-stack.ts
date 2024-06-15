@@ -1,7 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
-import { Cors } from '@aws-cdk/aws-apigateway';
 
 export class ProductServiceStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
@@ -15,9 +14,9 @@ export class ProductServiceStack extends cdk.Stack {
     });
 
     // Lambda function for getProductsById
-    const getProductByIdLambda = new lambda.Function(this, 'getProductByIdHandler', {
+    const getProductsByIdLambda = new lambda.Function(this, 'getProductsByIdHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'getProductById.handler',
+      handler: 'getProductsById.handler',
       code: lambda.Code.fromAsset('lambda-functions')
     });
 
@@ -35,7 +34,7 @@ export class ProductServiceStack extends cdk.Stack {
     productsResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsListLambda));
 
     const productResource = productsResource.addResource('{productId}');
-    productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductByIdLambda));
+    productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsByIdLambda));
  
   }
 }
