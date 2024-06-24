@@ -7,7 +7,9 @@
       "dom"
     ],
     "types": [
-      "uuid"
+      "uuid",
+      "node",
+      "jest"
     ],
     "declaration": true,
     "strict": true,

@@ -7,16 +7,23 @@ test('Lambda Functions Created', () => {
   const stack = new ProductServiceStack(app, 'MyTestStack');
 
   const template = Template.fromStack(stack);
+
   console.log('Checking for getListProducts Lambda function...');
   template.hasResourceProperties('AWS::Lambda::Function', {
     Handler: 'getProductsList.handler',
-    Runtime: 'nodejs18.x',
+    Runtime: 'nodejs16.x', 
   });
 
   console.log('Checking for getProductsById Lambda function...');
   template.hasResourceProperties('AWS::Lambda::Function', {
     Handler: 'getProductsById.handler',
-    Runtime: 'nodejs18.x',
+    Runtime: 'nodejs16.x', 
+  });
+
+  console.log('Checking for createProduct Lambda function...');
+  template.hasResourceProperties('AWS::Lambda::Function', {
+    Handler: 'createProduct.handler',
+    Runtime: 'nodejs16.x', // Обновлено до nodejs18.x
   });
 });
 
@@ -39,5 +46,15 @@ test('API Gateway Created', () => {
   console.log('Checking for GET method on /products...');
   template.hasResourceProperties('AWS::ApiGateway::Method', {
     HttpMethod: 'GET',
+  });
+
+  console.log('Checking for GET method on /products/{productId}...');
+  template.hasResourceProperties('AWS::ApiGateway::Method', {
+    HttpMethod: 'GET',
+  });
+
+  console.log('Checking for POST method on /products...');
+  template.hasResourceProperties('AWS::ApiGateway::Method', {
+    HttpMethod: 'POST',
   });
 });
