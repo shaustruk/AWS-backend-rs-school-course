@@ -1,29 +1,51 @@
-import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
-import { products } from './mockData';
+import * as cdk from 'aws-cdk-lib';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 
-export const handler: APIGatewayProxyHandler = async (
-  event: APIGatewayProxyEvent,
-): Promise<APIGatewayProxyResult> => {  
-    if (products){
-      return {
-        statusCode: 200,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Content-Type": "application/json",
+export class ProductServiceStack extends cdk.Stack {
+  constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
+    super(scope, id, props);
+
+
+    const productsTableName = 'products';
+    const stocksTableName = 'stocks';
+
+    // Lambda function for getProductsList
+    const getProductsListLambda = new lambda.Function(this, 'getProductsListHandler', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'getProductsList.handler',
+      code: lambda.Code.fromAsset('lambda-functions'),
+      environment: {
+        PRODUCTS_TABLE_NAME: productsTableName,
+        STOCKS_TABLE_NAME: stocksTableName,
       },
-      body: JSON.stringify(products),
-      };
-    }
-   
-else {
-    console.error('Error fetching products');
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: 'Internal server error' }),
-  
-    };
- 
-};
+    });
+
+    // Lambda function for getProductsById
+    const getProductsByIdLambda = new lambda.Function(this, 'getProductsByIdHandler', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'getProductsById.handler',
+      code: lambda.Code.fromAsset('lambda-functions'),
+      environment: {
+        PRODUCTS_TABLE_NAME: productsTableName,
+        STOCKS_TABLE_NAME: stocksTableName,
+      },
+    });
+
+    // API Gateway
+    const api = new apigateway.RestApi(this, 'productsApi', {
+      restApiName: 'Products Service',
+      description: 'This service serves products.',
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: apigateway.Cors.ALL_METHODS,
+      },
+    });
+
+    const productsResource = api.root.addResource('products');
+    productsResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsListLambda));
+
+    const productResource = productsResource.addResource('{productId}');
+    productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsByIdLambda));
+  }
 }

@@ -1,40 +1,56 @@
-import * as cdk from 'aws-cdk-lib';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as cdk from '@aws-cdk/core';
+import * as lambda from '@aws-cdk/aws-lambda';
+import * as apigateway from '@aws-cdk/aws-apigateway';
 
-export class ProductServiceStack extends cdk.Stack {
-  constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
+export class MyCdkProjectStack extends cdk.Stack {
+  constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // Lambda function for getProductsList
-    const getProductsListLambda = new lambda.Function(this, 'getProductsListHandler', {
-      runtime: lambda.Runtime.NODEJS_18_X,
+   
+    const productsTableName = 'products';
+    const stocksTableName = 'stocks';
+
+    const getProductsListLambda = new lambda.Function(this, 'GetProductsListLambda', {
+      runtime: lambda.Runtime.NODEJS_16_X,
+      code: lambda.Code.fromAsset('lambda'),
       handler: 'getProductsList.handler',
-      code: lambda.Code.fromAsset('lambda-functions')
-    });
-
-    // Lambda function for getProductsById
-    const getProductsByIdLambda = new lambda.Function(this, 'getProductsByIdHandler', {
-      runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'getProductsById.handler',
-      code: lambda.Code.fromAsset('lambda-functions')
-    });
-
-    // API Gateway
-    const api = new apigateway.RestApi(this, 'productsApi', {
-      restApiName: 'Products Service',
-      description: 'This service serves products.',
-      defaultCorsPreflightOptions: {
-        allowOrigins: apigateway.Cors.ALL_ORIGINS,
-        allowMethods: apigateway.Cors.ALL_METHODS,
+      environment: {
+        PRODUCTS_TABLE_NAME: productsTableName,
+        STOCKS_TABLE_NAME: stocksTableName,
       },
+    });
+
+    const getProductsByIdLambda = new lambda.Function(this, 'GetProductsByIdLambda', {
+      runtime: lambda.Runtime.NODEJS_16_X,
+      code: lambda.Code.fromAsset('lambda'),
+      handler: 'getProductsById.handler',
+      environment: {
+        PRODUCTS_TABLE_NAME: productsTableName,
+        STOCKS_TABLE_NAME: stocksTableName,
+      },
+    });
+
+    const createProductLambda = new lambda.Function(this, 'CreateProductLambda', {
+      runtime: lambda.Runtime.NODEJS_16_X,
+      code: lambda.Code.fromAsset('lambda'),
+      handler: 'createProduct.handler',
+      environment: {
+        PRODUCTS_TABLE_NAME: productsTableName,
+      },
+    });
+
+    const api = new apigateway.RestApi(this, 'ProductsApi', {
+      restApiName: 'Products Service',
     });
 
     const productsResource = api.root.addResource('products');
     productsResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsListLambda));
+    productsResource.addMethod('POST', new apigateway.LambdaIntegration(createProductLambda));
 
     const productResource = productsResource.addResource('{productId}');
     productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsByIdLambda));
- 
   }
 }
+
+const app = new cdk.App();
+new MyCdkProjectStack(app, 'MyCdkProjectStack');
