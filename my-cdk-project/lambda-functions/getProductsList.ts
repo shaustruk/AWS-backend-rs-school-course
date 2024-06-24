@@ -1,51 +1,58 @@
-import * as cdk from 'aws-cdk-lib';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as apigateway from 'aws-cdk-lib/aws-apigateway';
-
-export class ProductServiceStack extends cdk.Stack {
-  constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
-    super(scope, id, props);
+import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
+import { DynamoDB } from 'aws-sdk';
+import { IProduct } from './productInterface';
 
 
-    const productsTableName = 'products';
-    const stocksTableName = 'stocks';
+const dynamoDb = new DynamoDB.DocumentClient();
+const PRODUCTS_TABLE_NAME = 'products';
+const STOCKS_TABLE_NAME = 'stocks';
 
-    // Lambda function for getProductsList
-    const getProductsListLambda = new lambda.Function(this, 'getProductsListHandler', {
-      runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'getProductsList.handler',
-      code: lambda.Code.fromAsset('lambda-functions'),
-      environment: {
-        PRODUCTS_TABLE_NAME: productsTableName,
-        STOCKS_TABLE_NAME: stocksTableName,
-      },
+export const handler: APIGatewayProxyHandler = async (
+  event: APIGatewayProxyEvent,
+): Promise<APIGatewayProxyResult> => {
+  try {
+    // Scan the products table
+    const productsData = await dynamoDb.scan({ TableName: PRODUCTS_TABLE_NAME }).promise();
+    const products = productsData.Items;
+
+    if (!products) {
+      return {
+        statusCode: 404,
+        body: JSON.stringify({ message: 'No products found' }),
+      };
+    }
+
+    // Scan the stocks table
+    const stocksData = await dynamoDb.scan({ TableName: STOCKS_TABLE_NAME }).promise();
+    const stocks = stocksData.Items || [];
+
+    // Map and join products and stocks data
+    const result: IProduct[] = products.map(product => {
+      const stock = stocks.find(s => s.product_id === product.id);
+      return {
+        id: product.id,
+        title: product.title,
+        description: product.description,
+        price: product.price,
+        count: stock ? stock.count : 0,
+      };
     });
 
-    // Lambda function for getProductsById
-    const getProductsByIdLambda = new lambda.Function(this, 'getProductsByIdHandler', {
-      runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'getProductsById.handler',
-      code: lambda.Code.fromAsset('lambda-functions'),
-      environment: {
-        PRODUCTS_TABLE_NAME: productsTableName,
-        STOCKS_TABLE_NAME: stocksTableName,
+    return {
+      statusCode: 200,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Content-Type": "application/json",
       },
-    });
-
-    // API Gateway
-    const api = new apigateway.RestApi(this, 'productsApi', {
-      restApiName: 'Products Service',
-      description: 'This service serves products.',
-      defaultCorsPreflightOptions: {
-        allowOrigins: apigateway.Cors.ALL_ORIGINS,
-        allowMethods: apigateway.Cors.ALL_METHODS,
-      },
-    });
-
-    const productsResource = api.root.addResource('products');
-    productsResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsListLambda));
-
-    const productResource = productsResource.addResource('{productId}');
-    productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsByIdLambda));
+      body: JSON.stringify(result),
+    };
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ message: 'Internal server error' }),
+    };
   }
-}
+};

@@ -39,9 +39,9 @@ export class ProductServiceStack extends cdk.Stack {
     });
 
     // API Gateway
-    const api = new apigateway.RestApi(this, 'productsApi', {
-      restApiName: 'Products Service',
-      description: 'This service serves products.',
+    const api = new apigateway.RestApi(this, "ProductsApi", {
+      restApiName: "Products Service",
+      description: "This service serves products",
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
