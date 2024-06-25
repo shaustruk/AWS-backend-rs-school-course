@@ -4,7 +4,7 @@ info:
   description: This service serves products.
   version: 1.0.0
 servers:
-  - url: https://uysp9a4xb3.execute-api.us-east-1.amazonaws.com/prod
+  - url: https://lf94d80kr9.execute-api.us-east-1.amazonaws.com/prod
     description: AWS API Gateway endpoint
 paths:
   /products:
@@ -20,6 +20,28 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Product'
+   post: 
+      summary: Create a new product
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Created product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /products/{productId}:
     get:
       summary: Get a product by ID
@@ -44,6 +66,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
 components:
   schemas:
     Product:
@@ -64,6 +87,21 @@ components:
         count:
           type: integer
           example: 5
+ProductInput: 
+      type: object
+      properties:
+        title:
+          type: string
+          example: Product 2
+        price:
+          type: number
+          example: 150
+        description:
+          type: string
+          example: new product
+        count:
+          type: integer
+          example: 10
     Error:
       type: object
       properties:
