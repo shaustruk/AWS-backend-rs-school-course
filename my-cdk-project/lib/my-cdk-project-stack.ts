@@ -72,7 +72,7 @@ export class ProductServiceStack extends cdk.Stack {
     productsListResource.addMethod('POST', new apigateway.LambdaIntegration(createProductLambda));
     //id
     const productIdResource = productsListResource.addResource('{productId}');
-    productsListResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsByIdLambda));
+    productIdResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsByIdLambda));
 
   }
 }
