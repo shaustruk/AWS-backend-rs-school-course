@@ -1,9 +1,15 @@
 import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDB } from 'aws-sdk';
+import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 
-const dynamoDb = new DynamoDB.DocumentClient();
+//db
+const client = new DynamoDBClient({});
+const dynamodb = DynamoDBDocumentClient.from(client);
+
 const PRODUCTS_TABLE_NAME = 'products';
 const STOCKS_TABLE_NAME = 'stocks';
+
 export const handler: APIGatewayProxyHandler = async (
   event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> => {  
@@ -19,11 +25,12 @@ export const handler: APIGatewayProxyHandler = async (
 
   try {
    
-    const productData = await dynamoDb.get({
-      TableName: PRODUCTS_TABLE_NAME,
-      Key: { id: productId },
-    }).promise();
-
+    const productData = await client.send(
+      new GetCommand({
+        TableName: PRODUCTS_TABLE_NAME,
+        Key: { productId },
+      })
+    );
     const product = productData.Item;
 
     if (!product) {
@@ -33,20 +40,26 @@ export const handler: APIGatewayProxyHandler = async (
       };
     }
 
-    // Получаем количество из таблицы Stocks
-    const stockData = await dynamoDb.get({
-      TableName: STOCKS_TABLE_NAME,
-      Key: { product_id: productId },
-    }).promise();
-
-    const stock = stockData.Item;
-
+    const stockData = await client.send(
+      new GetCommand({
+        TableName: STOCKS_TABLE_NAME,
+        Key: { productId },
+      })
+    );
+ 
+    const stockProduct = stockData.Item;
+    if (!stockProduct) {
+      return {
+        statusCode: 404,
+        body: JSON.stringify({ error: 'Product not found' }),
+      };
+    }
     const result = {
       id: product.id,
       title: product.title,
       description: product.description,
       price: product.price,
-      count: stock ? stock.count : 0,
+      count: stockProduct ? stockProduct.count : 0,
     };
 
     return {
