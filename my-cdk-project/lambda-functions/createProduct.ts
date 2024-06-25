@@ -63,7 +63,7 @@ export const handler: APIGatewayProxyHandler = async (
         "Access-Control-Allow-Headers": "Content-Type",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(newProduct),
+      body: JSON.stringify({ message: `${newProduct.title} was created item`}),
     };
   } catch (error) {
     console.error('Error creating product:', error);
