@@ -15,6 +15,7 @@ export const handler: APIGatewayProxyHandler = async (
 ): Promise<APIGatewayProxyResult> => {  
 
   const productId = event.pathParameters?.productId;
+console.log(`id: ${productId}`);
 
   if (!productId) {
     return {
@@ -43,7 +44,9 @@ export const handler: APIGatewayProxyHandler = async (
     const stockData = await dynamodb.send(
       new GetCommand({
         TableName: STOCKS_TABLE_NAME,
-        Key: { productId },
+        Key: {
+          product_id: productId
+      }
       })
     );
  
