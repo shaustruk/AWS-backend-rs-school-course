@@ -48,6 +48,7 @@ export class ProductServiceStack extends cdk.Stack {
     productsTable.grantReadData(getProductsListLambda);
     productsTable.grantReadData(getProductsByIdLambda);  
     productsTable.grantWriteData(createProductLambda);  
+
     stocksTable.grantReadData(getProductsListLambda);
     stocksTable.grantReadData(getProductsByIdLambda);
     stocksTable.grantWriteData(createProductLambda);
@@ -66,12 +67,12 @@ export class ProductServiceStack extends cdk.Stack {
     const productsListResource = api.root.addResource('products');
     //list
     productsListResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsListLambda));
-    //id
-    const productIdResource = productsListResource.addResource('{productId}');
-    productIdResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsByIdLambda));
+
     //create item
     productsListResource.addMethod('POST', new apigateway.LambdaIntegration(createProductLambda));
-
+    //id
+    const productIdResource = productsListResource.addResource('{productId}');
+    productsListResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsByIdLambda));
 
   }
 }
