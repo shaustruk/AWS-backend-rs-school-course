@@ -25,7 +25,7 @@ export const handler: APIGatewayProxyHandler = async (
 
   try {
    
-    const productData = await client.send(
+    const productData = await dynamodb.send(
       new GetCommand({
         TableName: PRODUCTS_TABLE_NAME,
         Key: { productId },
@@ -40,7 +40,7 @@ export const handler: APIGatewayProxyHandler = async (
       };
     }
 
-    const stockData = await client.send(
+    const stockData = await dynamodb.send(
       new GetCommand({
         TableName: STOCKS_TABLE_NAME,
         Key: { productId },
