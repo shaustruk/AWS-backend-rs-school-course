@@ -15,6 +15,9 @@ export const handler: APIGatewayProxyHandler = async (
   event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> => {  
 
+
+  try {
+   
   const productId = event.pathParameters?.productId;
   console.log(`id: ${productId}`);
 
@@ -24,9 +27,6 @@ export const handler: APIGatewayProxyHandler = async (
       body: JSON.stringify({ error: 'Product ID is required' }),
     };
   }
-
-  try {
-   
     const productsScan = new GetCommand({
       TableName: PRODUCTS_TABLE_NAME,
       Key: { id: productId }
@@ -38,19 +38,16 @@ export const handler: APIGatewayProxyHandler = async (
 
     console.log('Product:', productsResponse);
 
-    const stockResult = await dynamodb.send(
-      new GetCommand({
-          TableName: STOCKS_TABLE_NAME,
-          Key: {
-              product_id: productId
-          }
-      })  
-  )
-  const stock = stockResult.Item as IProduct;
-
+    const stockQueryCommand = new QueryCommand({
+      TableName: STOCKS_TABLE_NAME,
+      KeyConditionExpression: 'product_id = :productId',
+      ExpressionAttributeValues: { ':productId': product.id }
+    });
+    const stockResponse = await dynamodb.send(stockQueryCommand);
+ 
   const result = {
     ...product,
-    count: stock?.count || 0
+    count: stockResponse.Items?.[0]?.count || 0
 }
 
   if (product) {
@@ -62,7 +59,7 @@ export const handler: APIGatewayProxyHandler = async (
           "Access-Control-Allow-Headers": "Content-Type",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(stock)
+        body: JSON.stringify(result)
     };
     return response;
 } else {

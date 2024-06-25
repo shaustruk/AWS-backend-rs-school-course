@@ -14,10 +14,12 @@ export const handler: APIGatewayProxyHandler = async (
     // Scan the products table
     const productsData = await dynamoDb.scan({ TableName: PRODUCTS_TABLE_NAME }).promise();
     const products = productsData.Items;
+
+    console.log('products:', products);
    // Scan the stocks table
    const stocksData = await dynamoDb.scan({ TableName: STOCKS_TABLE_NAME }).promise();
    const stocks = stocksData.Items || [];
-
+   console.log('stocks:', stocks);
     if (!products?.length || !stocks.length) {
       return {
         statusCode: 404,
