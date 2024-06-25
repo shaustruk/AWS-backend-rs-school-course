@@ -1,7 +1,8 @@
 import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDB } from 'aws-sdk';
-import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { IProduct } from './productInterface';
 
 //db
 const client = new DynamoDBClient({});
@@ -15,7 +16,7 @@ export const handler: APIGatewayProxyHandler = async (
 ): Promise<APIGatewayProxyResult> => {  
 
   const productId = event.pathParameters?.productId;
-console.log(`id: ${productId}`);
+  console.log(`id: ${productId}`);
 
   if (!productId) {
     return {
@@ -26,60 +27,68 @@ console.log(`id: ${productId}`);
 
   try {
    
-    const productData = await dynamodb.send(
+    const productsScan = new GetCommand({
+      TableName: PRODUCTS_TABLE_NAME,
+      Key: { id: productId }
+    });
+    const productsResponse = await dynamodb.send(productsScan);
+    
+
+    const product: IProduct = productsResponse.Item as IProduct;
+
+    console.log('Product:', productsResponse);
+
+    const stockResult = await dynamodb.send(
       new GetCommand({
-        TableName: PRODUCTS_TABLE_NAME,
-        Key: { productId },
-      })
-    );
-    const product = productData.Item;
+          TableName: STOCKS_TABLE_NAME,
+          Key: {
+              product_id: productId
+          }
+      })  
+  )
+  const stock = stockResult.Item as IProduct;
 
-    if (!product) {
-      return {
+  const result = {
+    ...product,
+    count: stock?.count || 0
+}
+
+  if (product) {
+    const response = {
+        statusCode: 200,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(stock)
+    };
+    return response;
+} else {
+    const response = {
         statusCode: 404,
-        body: JSON.stringify({ error: 'Product not found' }),
-      };
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: "Product not found" })
     }
-
-    const stockData = await dynamodb.send(
-      new GetCommand({
-        TableName: STOCKS_TABLE_NAME,
-        Key: {
-          product_id: productId
-      }
-      })
-    );
- 
-    const stockProduct = stockData.Item;
-    if (!stockProduct) {
-      return {
-        statusCode: 404,
-        body: JSON.stringify({ error: 'Product not found' }),
-      };
-    }
-    const result = {
-      id: product.id,
-      title: product.title,
-      description: product.description,
-      price: product.price,
-      count: stockProduct ? stockProduct.count : 0,
-    };
-
-    return {
-      statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(result),
-    };
-  } catch (error) {
-    console.error('Error fetching product by ID:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error' }),
-    };
-  }
+    return response;
+}   
+} catch (error) {
+console.error("Error....", error);
+ return {
+    statusCode: 500,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ message: "Internal Server Error" })
+};
+}
 };
