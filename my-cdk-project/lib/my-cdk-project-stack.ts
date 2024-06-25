@@ -1,15 +1,20 @@
 import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 
 export class ProductServiceStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
-   
-    const productsTableName = 'products';
-    const stocksTableName = 'stocks';
 
-    const getProductsListLambda = new lambda.Function(this, 'getProductsListHandler', {
+
+    const productsTableName = 'Products';
+    const stocksTableName = 'Stocks';
+
+    const productsTable  = dynamodb.Table.fromTableName(this, `${productsTableName}Ref`, productsTableName); 
+    const stocksTable = dynamodb.Table.fromTableName(this, `${stocksTableName}Ref`, stocksTableName);
+
+    const getProductsListLambda = new lambda.Function(this, 'getProductsListLambda', {
       runtime: lambda.Runtime.NODEJS_16_X,
       code: lambda.Code.fromAsset('lambda-functions'),
       handler: 'getProductsList.handler',
@@ -19,7 +24,8 @@ export class ProductServiceStack extends cdk.Stack {
       },
     });
 
-    const getProductsByIdLambda = new lambda.Function(this, 'GetProductsByIdLambda', {
+
+    const getProductsByIdLambda = new lambda.Function(this, 'getProductsByIdLambda', {
       runtime: lambda.Runtime.NODEJS_16_X,
       code: lambda.Code.fromAsset('lambda-functions'),
       handler: 'getProductsById.handler',
@@ -29,7 +35,7 @@ export class ProductServiceStack extends cdk.Stack {
       },
     });
 
-    const createProductLambda = new lambda.Function(this, 'CreateProductLambda', {
+    const createProductLambda = new lambda.Function(this, 'createProductLambda', {
       runtime: lambda.Runtime.NODEJS_16_X,
       code: lambda.Code.fromAsset('lambda-functions'),
       handler: 'createProduct.handler',
@@ -38,24 +44,36 @@ export class ProductServiceStack extends cdk.Stack {
       },
     });
 
+    //access
+    productsTable.grantReadData(getProductsListLambda);
+    productsTable.grantReadData(getProductsByIdLambda);  
+    productsTable.grantWriteData(createProductLambda);  
+    stocksTable.grantReadData(getProductsListLambda);
+    stocksTable.grantReadData(getProductsByIdLambda);
+    stocksTable.grantWriteData(createProductLambda);
+
     // API Gateway
     const api = new apigateway.RestApi(this, "ProductsApi", {
       restApiName: "Products Service",
       description: "This service serves products",
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
-        allowMethods: apigateway.Cors.ALL_METHODS,
-      },
+        allowMethods: apigateway.Cors.ALL_METHODS, 
+        allowHeaders: apigateway.Cors.DEFAULT_HEADERS
+      }
     });
 
-    const productsResource = api.root.addResource('products');
-    productsResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsListLambda));
-    productsResource.addMethod('POST', new apigateway.LambdaIntegration(createProductLambda));
+    const productsListResource = api.root.addResource('products');
+    //list
+    productsListResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsListLambda));
+    //id
+    const productIdResource = productsListResource.addResource('{productId}');
+    productIdResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsByIdLambda));
+    //create item
+    productsListResource.addMethod('POST', new apigateway.LambdaIntegration(createProductLambda));
 
-    const productResource = productsResource.addResource('{productId}');
-    productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsByIdLambda));
+
   }
 }
 
-const app = new cdk.App();
-new ProductServiceStack(app, 'ProductServiceStack');
+
