@@ -14,20 +14,20 @@ export const handler: APIGatewayProxyHandler = async (
     // Scan the products table
     const productsData = await dynamoDb.scan({ TableName: PRODUCTS_TABLE_NAME }).promise();
     const products = productsData.Items;
+   // Scan the stocks table
+   const stocksData = await dynamoDb.scan({ TableName: STOCKS_TABLE_NAME }).promise();
+   const stocks = stocksData.Items || [];
 
-    if (!products) {
+    if (!products?.length || !stocks.length) {
       return {
         statusCode: 404,
         body: JSON.stringify({ message: 'No products found' }),
       };
     }
 
-    // Scan the stocks table
-    const stocksData = await dynamoDb.scan({ TableName: STOCKS_TABLE_NAME }).promise();
-    const stocks = stocksData.Items || [];
-
+    
     // Map and join products and stocks data
-    const result: IProduct[] = products.map(product => {
+    const resultJoinStock: IProduct[] = products.map(product => {
       const stock = stocks.find(s => s.product_id === product.id);
       return {
         id: product.id,
@@ -46,7 +46,7 @@ export const handler: APIGatewayProxyHandler = async (
         "Access-Control-Allow-Headers": "Content-Type",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(result),
+      body: JSON.stringify(resultJoinStock),
     };
   } catch (error) {
     console.error('Error fetching products:', error);
