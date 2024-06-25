@@ -8,8 +8,8 @@ export class ProductServiceStack extends cdk.Stack {
     super(scope, id, props);
 
 
-    const productsTableName = 'Products';
-    const stocksTableName = 'Stocks';
+    const productsTableName = 'products';
+    const stocksTableName = 'stocks';
 
     const productsTable  = dynamodb.Table.fromTableName(this, `${productsTableName}Ref`, productsTableName); 
     const stocksTable = dynamodb.Table.fromTableName(this, `${stocksTableName}Ref`, stocksTableName);
