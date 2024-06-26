@@ -25,23 +25,25 @@ export const handler: APIGatewayProxyHandler = async (
       TableName: PRODUCTS_TABLE_NAME,
       Key: { id: productId }
     });
-    const productsResponse = await dynamodb.send(productsScan);
-    
 
+    const stockScan = new GetCommand({
+      TableName: STOCKS_TABLE_NAME,
+      Key: {
+        product_id: productId,
+      },
+    });
+  
+    const productsResponse = await dynamodb.send(productsScan);
     const product: IProduct = productsResponse.Item as IProduct;
 
     console.log('Product:', productsResponse);
-
-    const stockQueryCommand = new QueryCommand({
-      TableName: STOCKS_TABLE_NAME,
-      KeyConditionExpression: 'product_id = :productId',
-      ExpressionAttributeValues: { ':productId': product.id }
-    });
-    const stockResponse = await dynamodb.send(stockQueryCommand);
  
+    const stockResponse = await dynamodb.send(stockScan);
+    const stockItem: IProduct = stockResponse.Item as IProduct;
+
   const result = {
     ...product,
-    count: stockResponse.Items?.[0]?.count || 0
+    count: stockItem.count || 0
   }
     console.log('Result:', result)
 
