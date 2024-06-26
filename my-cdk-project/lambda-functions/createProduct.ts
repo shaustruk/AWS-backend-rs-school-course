@@ -1,7 +1,6 @@
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { PutCommand, DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
-import { IProduct } from "./productInterface";
+import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({});
 const dynamodb = DynamoDBDocumentClient.from(client);
@@ -9,17 +8,16 @@ const dynamodb = DynamoDBDocumentClient.from(client);
 const PRODUCTS_TABLE_NAME = 'products';
 const STOCKS_TABLE_NAME = 'stocks';
 
-
 if (!PRODUCTS_TABLE_NAME || !STOCKS_TABLE_NAME) {
   throw new Error("Environment variables PRODUCTS_TABLE_NAME and STOCKS_TABLE_NAME must be defined");
 }
 
 export const handler: APIGatewayProxyHandler = async (event) => {
-  const body = JSON.parse(event.body!);  
   try {
-    // Парсинг тела запроса    
-    const body = JSON.parse(event.body!);
-    console.log('body:', body);
+    const body = JSON.parse(event.body || '{}');
+    console.log('Body:', body);
+
+    // Validate required fields
     if (!body.title || !body.price || body.count === undefined) {
       return {
         statusCode: 400,
@@ -32,48 +30,61 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       };
     }
 
-    const product = {
-      id:randomUUID(),
+    // Generate unique IDs
+    const productId = randomUUID();
+    const stockId = randomUUID();
+
+    // Prepare the product and stock items
+    const productItem = {
+      id: productId,
       title: body.title,
       description: body.description || '',
       price: body.price
     };
 
-    const stock = {
-      product_id: product.id,
+    const stockItem = {
+      product_id: productItem.id,
       count: body.count
     };
 
-    console.log(product, stock);
+    console.log('Product:', productItem);
+    console.log('Stock:', stockItem);
 
-    const paramsProduct = {
-      TableName: PRODUCTS_TABLE_NAME,
-      Item: product
+    // Define the transaction parameters
+    const transactParams = {
+      TransactItems: [
+        {
+          Put: {
+            TableName: PRODUCTS_TABLE_NAME,
+            Item: productItem,
+            ConditionExpression: 'attribute_not_exists(id)' // Ensure product does not already exist
+          }
+        },
+        {
+          Put: {
+            TableName: STOCKS_TABLE_NAME,
+            Item: stockItem,
+            ConditionExpression: 'attribute_not_exists(id)' // Ensure stock does not already exist
+          }
+        }
+      ]
     };
 
-    const paramsStock = {
-      TableName: STOCKS_TABLE_NAME,
-      Item: stock
+    // Execute the transaction
+    await dynamodb.send(new TransactWriteCommand(transactParams));
+
+    // Return success response
+    const response = {
+      id: productId,
+      title: productItem.title,
+      description: productItem.description,
+      price: productItem.price,
+      count: stockItem.count
     };
-
-    const productResponce:IProduct = {
-      id: product.id,
-      title: product.price,
-      description: product.description, 
-      price: product.price,
-      count: stock.count,
-     
-    };
-
-    const productPutCommand = new PutCommand(paramsProduct);
-    const stockPutCommand = new PutCommand(paramsStock);
-
-    await dynamodb.send(productPutCommand);
-    await dynamodb.send(stockPutCommand);
 
     return {
       statusCode: 201,
-      body: JSON.stringify(productResponce),
+      body: JSON.stringify(response),
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Content-Type": "application/json",
@@ -81,10 +92,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       },
     };
   } catch (error) {
-    console.error('Failed to add product:', error);
+    console.error('Failed to add product and stock:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: 'Failed to add product' }),
+      body: JSON.stringify({ message: 'Failed to add product and stock', error }),
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Content-Type": "application/json",
@@ -92,15 +103,12 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       },
     };
   }
-
-  function randomUUID(): string {
-  
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  }
-
-
 };
+
+function randomUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
