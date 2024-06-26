@@ -1,0 +1,110 @@
+openapi: 3.0.0
+info:
+  title: Products Service
+  description: This service serves products.
+  version: 1.0.0
+servers:
+  - url: https://lf94d80kr9.execute-api.us-east-1.amazonaws.com/prod
+    description: AWS API Gateway endpoint
+paths:
+  /products:
+    get:
+      summary: Get all products
+      operationId: getProductsList
+      responses:
+        '200':
+          description: A list of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+   post: 
+      summary: Create a new product
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Created product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /products/{productId}:
+    get:
+      summary: Get a product by ID
+      operationId: getProductById
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the product to retrieve
+      responses:
+        '200':
+          description: A single product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Product 1
+        price:
+          type: number
+          example: 100
+        description:
+          type: string
+          example: super
+        count:
+          type: integer
+          example: 5
+ProductInput: 
+      type: object
+      properties:
+        title:
+          type: string
+          example: Product 2
+        price:
+          type: number
+          example: 150
+        description:
+          type: string
+          example: new product
+        count:
+          type: integer
+          example: 10
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Product not found
