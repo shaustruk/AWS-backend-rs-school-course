@@ -18,15 +18,9 @@ export const handler: APIGatewayProxyHandler = async (
 
   try {
    
-  const productId = event.pathParameters?.productId;
+  const productId = event.pathParameters!.productId;
   console.log(`id: ${productId}`);
 
-  if (!productId) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: 'Product ID is required' }),
-    };
-  }
     const productsScan = new GetCommand({
       TableName: PRODUCTS_TABLE_NAME,
       Key: { id: productId }
@@ -48,9 +42,11 @@ export const handler: APIGatewayProxyHandler = async (
   const result = {
     ...product,
     count: stockResponse.Items?.[0]?.count || 0
-}
+  }
+    console.log('Result:', result)
 
-  if (product) {
+
+  if (result) {
     const response = {
         statusCode: 200,
         headers: {
