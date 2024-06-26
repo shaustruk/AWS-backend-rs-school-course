@@ -1,5 +1,4 @@
 import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
-import { DynamoDB } from 'aws-sdk';
 import { DynamoDBDocumentClient, GetCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { IProduct } from './productInterface';

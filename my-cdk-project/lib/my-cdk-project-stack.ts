@@ -26,7 +26,7 @@ export class ProductServiceStack extends cdk.Stack {
 
 
     const getProductsByIdLambda = new lambda.Function(this, 'getProductsByIdLambda', {
-      runtime: lambda.Runtime.NODEJS_16_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       code: lambda.Code.fromAsset('lambda-functions'),
       handler: 'getProductsById.handler',
       environment: {
@@ -65,13 +65,14 @@ export class ProductServiceStack extends cdk.Stack {
     });
 
     const productsListResource = api.root.addResource('products');
+    const productIdResource = productsListResource.addResource('{productId}');
     //list
     productsListResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsListLambda));
 
     //create item
     productsListResource.addMethod('POST', new apigateway.LambdaIntegration(createProductLambda));
     //id
-    const productIdResource = productsListResource.addResource('{productId}');
+
     productIdResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsByIdLambda));
 
   }
