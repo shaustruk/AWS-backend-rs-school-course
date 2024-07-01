@@ -4,6 +4,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
+import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 
 export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -11,9 +12,9 @@ export class ImportServiceStack extends cdk.Stack {
 
     // Define the S3 bucket
     const bucket = new s3.Bucket(this, 'ImportServiceBucket', {
-      versioned: false,
-      removalPolicy: cdk.RemovalPolicy.DESTROY, 
-      autoDeleteObjects: true, 
+      versioned: true,
+      removalPolicy: cdk.RemovalPolicy.DESTROY, // NOT recommended for production code
+      autoDeleteObjects: true, // NOT recommended for production code
     });
 
     // Deploy an empty file to create the 'uploaded' folder
@@ -22,7 +23,7 @@ export class ImportServiceStack extends cdk.Stack {
       sources: [s3deploy.Source.data('uploaded/', '')],
     });
 
-    // Define the Lambda function
+    // Define the importProductsFile Lambda function
     const importProductsFileLambda = new lambda.Function(this, 'importProductsFileLambda', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'importProductsFile.handler',
@@ -33,17 +34,18 @@ export class ImportServiceStack extends cdk.Stack {
     });
 
     // Grant the Lambda function permissions to interact with the S3 bucket
-    bucket.grantPut(importProductsFileLambda);
+    bucket.grantReadWrite(importProductsFileLambda);
 
     // Define the API Gateway
     const api = new apigateway.RestApi(this, 'ImportServiceApi', {
       restApiName: 'Import Service',
+      cloudWatchRole: true,
       description: 'This service handles product import operations.',
       defaultCorsPreflightOptions: {
-        allowOrigins: apigateway.Cors.ALL_ORIGINS,
-        allowMethods: apigateway.Cors.ALL_METHODS, 
-        allowHeaders: apigateway.Cors.DEFAULT_HEADERS
-      }
+        allowOrigins: ['https://dsi41wdpse5jo.cloudfront.net'], 
+        allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: ['Content-Type'],
+      },
     });
 
     // Integrate the Lambda function with the API Gateway
@@ -51,7 +53,27 @@ export class ImportServiceStack extends cdk.Stack {
       requestTemplates: { 'application/json': '{ "statusCode": 200 }' }
     });
 
-    api.root.addMethod('GET', importIntegration); // GET /import
+    const importResource = api.root.addResource('import');
+    importResource.addMethod('GET', importIntegration, {
+      requestParameters: {
+        'method.request.querystring.name': true
+      }
+    }); // GET /import
+
+    // Define the importFileParser Lambda function
+    const importFileParserLambda = new lambda.Function(this, 'importFileParserLambda', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'importFileParser.handler',
+      code: lambda.Code.fromAsset('lambda-functions'),
+    });
+
+    // Grant the Lambda function permissions to interact with the S3 bucket
+    bucket.grantRead(importFileParserLambda);
+
+    // Add S3 event notification to trigger the importFileParser Lambda function
+    bucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(importFileParserLambda), {
+      prefix: 'uploaded/',
+    });
 
     // Output the API endpoint
     new cdk.CfnOutput(this, 'ApiEndpoint', {
