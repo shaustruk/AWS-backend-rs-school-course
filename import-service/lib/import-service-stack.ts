@@ -36,17 +36,17 @@ export class ImportServiceStack extends cdk.Stack {
     // Grant the Lambda function permissions to interact with the S3 bucket
     bucket.grantReadWrite(importProductsFileLambda);
 
-    // Define the API Gateway
-    const api = new apigateway.RestApi(this, 'ImportServiceApi', {
-      restApiName: 'Import Service',
-      cloudWatchRole: true,
-      description: 'This service handles product import operations.',
-      defaultCorsPreflightOptions: {
-        allowOrigins: ['https://dsi41wdpse5jo.cloudfront.net'], 
-        allowMethods: apigateway.Cors.ALL_METHODS,
-        allowHeaders: ['Content-Type'],
-      },
-    });
+ // Define the API Gateway
+ const api = new apigateway.RestApi(this, 'ImportServiceApi', {
+  restApiName: 'Import Service',
+  cloudWatchRole: true,
+  description: 'This service handles product import operations.',
+  defaultCorsPreflightOptions: {
+    allowOrigins: ['*'],  // Allow all origins or specify your domain
+    allowMethods: apigateway.Cors.ALL_METHODS,
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Api-Key', 'X-Amz-Date', 'X-Amz-Security-Token'],
+  },
+});
 
     // Integrate the Lambda function with the API Gateway
     const importIntegration = new apigateway.LambdaIntegration(importProductsFileLambda, {
@@ -57,8 +57,9 @@ export class ImportServiceStack extends cdk.Stack {
     importResource.addMethod('GET', importIntegration, {
       requestParameters: {
         'method.request.querystring.name': true
-      }
-    }); // GET /import
+      },
+      
+    });   
 
     // Define the importFileParser Lambda function
     const importFileParserLambda = new lambda.Function(this, 'importFileParserLambda', {
