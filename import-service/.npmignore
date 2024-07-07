@@ -1,9 +1,5 @@
 *.ts
-*.js
 !*.d.ts
-
-.env
-.env.test
 
 # CDK asset staging directory
 .cdk.staging
